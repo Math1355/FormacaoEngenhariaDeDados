@@ -1,0 +1,98 @@
+beeline
+!connect jdbc:hive2://
+
+show database;
+create database projeto;
+use projeto;
+
+create table veiculo(
+    IDVeiculo int,
+    Dt_Aquisicao date,
+    Ano int,
+    Modelo string,
+    Placa string,
+    Status string,
+    Preco_diaria float)
+row format delimited fields terminated by ','
+location
+'/user/cloudera/veiculo';
+
+create table cliente(IDCliente int, CPF string, CNH string, Validade_CNH date, Nome string, Dt_Cadastro date, Dt_Nascimento date, Telefone string, Status string)
+row format delimited fields terminated by ','
+location
+'/user/cloudera/cliente';
+
+create table despachante(IDDespachante int, Nome string, Status string, Filial string) row format delimited fields terminated by ',' location '/user/cloudera/despachante';
+
+create table Locacao(IDLocacao int, IDVeiculo int, IDCliente int, IDDespachante int, Dt_Locacao Date, Dt_Entrega Date, Valor_Total float)
+row format delimited fields terminated by ','
+location
+'/user/cloudera/locacao';
+
+----------------------------------------
+
+--Quais e quantos veiculos foram locados com grão mensal
+CREATE View locperiodo as
+SELECT veiculo.modelo, month(locacao.dt_locacao) as MES, year(locacao.dt_locacao) as ANO, 
+       count(*) as quantidade FROM veiculo
+inner join locacao
+on veiculo.idveiculo = locacao.idveiculo
+WHERE veiculo.status = 'Locado'
+GROUP BY veiculo.modelo, month(locacao.dt_locacao), year(locacao.dt_locacao)
+ORDER BY quantidade DESC;
+
+--Quais despachantes locaram quais veiculos com grão mensal
+CREATE VIEW desplocperiodo
+AS
+SELECT despachante.nome, 
+       --veiculo.modelo, 
+       month(locacao.dt_locacao), 
+       year(locacao.dt_locacao), 
+       count(*) as quantidade 
+from locacao
+join veiculo
+on locacao.idveiculo = veiculo.idveiculo
+join despachante
+on locacao.iddespachante = despachante.iddespachante
+GROUP BY 
+        despachante.nome, 
+        --veiculo.modelo, 
+        month(locacao.dt_locacao), year(locacao.dt_locacao)
+ORDER BY quantidade DESC;
+
+--Qual o faturamento por veiculo com grão mensal
+CREATE VIEW fatmensal
+AS
+SELECT month(loc.dt_locacao) as MES, year(loc.dt_locacao) as ANO,
+       sum(loc.valor_total) as faturamento from locacao loc
+GROUP BY month(loc.dt_locacao), 
+         year(loc.dt_locacao)
+ORDER BY mes, ano;
+
+--Quais clientes locaram quais veiculos com grão mensal
+CREATE VIEW clifat
+AS
+SELECT cli.nome, month(loc.dt_locacao) as MES, year(loc.dt_locacao) as ANO,
+       sum(loc.valor_total) as faturamento from locacao loc
+join cliente cli
+on loc.idcliente = cli.idcliente
+GROUP BY cli.nome,
+         month(loc.dt_locacao), 
+         year(loc.dt_locacao)
+ORDER BY cli.nome, mes, ano;
+
+--Qual o faturamento por despachante com grão mensal
+CREATE VIEW despfat
+AS
+SELECT desp.nome, month(loc.dt_locacao) as MES, year(loc.dt_locacao) as ANO,
+       sum(loc.valor_total) as faturamento from locacao loc
+join despachante desp
+on loc.iddespachante = desp.iddespachante
+GROUP BY desp.nome,
+         month(loc.dt_locacao), 
+         year(loc.dt_locacao)
+ORDER BY desp.nome, mes, ano;
+
+
+
+

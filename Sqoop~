@@ -1,0 +1,16 @@
+#visualizar databases
+sqoop list-databases --connect jdbc:postgresql://127.0.0.1/ --username postgres --password 123456
+
+#visualizar tabelas
+sqoop list-tables --connect jdbc:postgresql://127.0.0.1/projeto --username postgres --password 123456 -- --schema locadora
+
+#importar HDFS
+sqoop import-all-tables --connect jdbc:postgresql://127.0.0.1/projeto --username postgres --password 123456 -- --schema locadora
+
+#Verificar se a importação foi ok
+sudo hdfs dfs -ls /user/cloudera
+
+#E possivel importar a tabela diretamente para o hive, com o exemplo abaixo
+sqoop import -connect jdbc:postgresql://127.0.0.1/projeto --username postgres --password 123456 --table cliente --hive-import --create-hive-table --hive-table LOCADORA.CLIENTE;
+
+
